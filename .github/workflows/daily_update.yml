@@ -1,0 +1,35 @@
+name: Daily Dashboard Update
+
+on:
+  schedule:
+    - cron: '0 23 * * 0-4'   # 매주 월~금 오전 8시 (KST = UTC+9, so UTC 23:00)
+  workflow_dispatch:           # 수동 실행 버튼
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install finance-datareader pandas "setuptools==70.3.0"
+
+      - name: Generate dashboard
+        run: python generate_dashboard.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          include_files: dashboard.html
+          commit_message: "dashboard update: ${{ github.run_id }}"
