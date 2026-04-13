@@ -341,11 +341,14 @@ const D = %%DATA_JSON%%;
   const tbd = document.getElementById('tbd');
   const n   = D.columns.length;
 
+  // 최신 → 과거 순서로 뒤집기
+  const cols = [...D.columns].reverse();
+
   // 헤더
   const th0 = document.createElement('th');
   th0.textContent = '지표';
   hdr.appendChild(th0);
-  D.columns.forEach(col => {
+  cols.forEach(col => {
     const th = document.createElement('th');
     th.textContent = col.label;
     hdr.appendChild(th);
@@ -364,7 +367,8 @@ const D = %%DATA_JSON%%;
     td0.textContent = row.name;
     tr.appendChild(td0);
 
-    D.rows[row.key].forEach((v, i) => {
+    // 값도 뒤집어서 렌더링
+    [...D.rows[row.key]].reverse().forEach((v, i) => {
       const td  = document.createElement('td');
       const txt = row.fmt(v);
       if (txt == null) {
@@ -372,7 +376,7 @@ const D = %%DATA_JSON%%;
         td.className = 'null-val';
       } else {
         td.textContent = txt;
-        if (i === n - 1) td.className = 'today';
+        if (i === 0) td.className = 'today';
       }
       tr.appendChild(td);
     });
