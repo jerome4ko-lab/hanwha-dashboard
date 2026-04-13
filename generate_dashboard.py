@@ -85,14 +85,21 @@ def to_date(idx_val):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def fetch_bond_series():
-    """국고채 30년물 일별 수익률 (investing.com KR30YT=RR)."""
+    """국고채 30년물 일별 수익률 (한국은행 ECOS)."""
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     try:
-        df = fdr.DataReader('INVESTING:KR30YT=RR', '2024-01-01', yesterday)
+        from FinanceDataReader.ecos.data import _ecos_stat
+        stat_ds = {
+            'dsId': '817Y002',
+            'dsItmId1': 'ACC_ITEM', 'dsItmId2': None, 'dsItmId3': None,
+            'dsItmVal1': '010230000', 'dsItmVal2': None, 'dsItmVal3': None,
+        }
+        df = _ecos_stat([stat_ds], '2024-01-01', yesterday, freq='D')
         if df is None or df.empty:
             return [], []
+        col    = df.columns[0]
         dates  = [str(to_date(i)) for i in df.index]
-        values = [round(float(v), 3) for v in df['Close'].values]
+        values = [round(float(v), 3) for v in df[col].values]
         return dates, values
     except Exception as e:
         print(f"  [WARN] 국고채 30Y 시계열: {e}")
