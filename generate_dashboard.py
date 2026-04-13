@@ -203,17 +203,17 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   /* ── Table ── */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { width: 100%; border-collapse: collapse; min-width: 480px; }
-  th, td { padding: 10px 14px; border-bottom: 1px solid #f4f4f4; }
+  table { width: 100%; border-collapse: collapse; min-width: 400px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid #f4f4f4; }
   th {
-    background: #f4f6fb; color: #555; font-weight: 600; font-size: 11px;
-    text-align: center; white-space: pre-line; line-height: 1.5;
+    background: #f4f6fb; color: #555; font-weight: 600; font-size: 9.5px;
+    text-align: center; white-space: pre-line; line-height: 1.35;
   }
-  th:first-child { text-align: left; width: 130px; }
-  td { text-align: right; color: #333; font-size: 12.5px; }
+  th:first-child { text-align: left; width: 90px; }
+  td { text-align: right; color: #333; font-size: 10px; }
   td:first-child {
     text-align: left; font-weight: 600; color: #2c2c2c;
-    background: #fafbfd;
+    background: #fafbfd; font-size: 10px;
   }
   tr:last-child td { border-bottom: none; }
   td.today { font-weight: 700; color: #1a2744; }
@@ -341,14 +341,11 @@ const D = %%DATA_JSON%%;
   const tbd = document.getElementById('tbd');
   const n   = D.columns.length;
 
-  // 최신 → 과거 순서로 뒤집기
-  const cols = [...D.columns].reverse();
-
   // 헤더
   const th0 = document.createElement('th');
   th0.textContent = '지표';
   hdr.appendChild(th0);
-  cols.forEach(col => {
+  D.columns.forEach(col => {
     const th = document.createElement('th');
     th.textContent = col.label;
     hdr.appendChild(th);
@@ -367,8 +364,7 @@ const D = %%DATA_JSON%%;
     td0.textContent = row.name;
     tr.appendChild(td0);
 
-    // 값도 뒤집어서 렌더링
-    [...D.rows[row.key]].reverse().forEach((v, i) => {
+    D.rows[row.key].forEach((v, i) => {
       const td  = document.createElement('td');
       const txt = row.fmt(v);
       if (txt == null) {
@@ -376,7 +372,7 @@ const D = %%DATA_JSON%%;
         td.className = 'null-val';
       } else {
         td.textContent = txt;
-        if (i === 0) td.className = 'today';
+        if (i === n - 1) td.className = 'today';
       }
       tr.appendChild(td);
     });
