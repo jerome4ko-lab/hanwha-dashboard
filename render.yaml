@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hanwha-morning-dashboard
+    env: static
+    staticPublishPath: .
+    buildCommand: ""
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+    routes:
+      - type: rewrite
+        source: /
+        destination: /index.html

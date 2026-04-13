@@ -477,13 +477,376 @@ const GRID = { color: '#f2f2f2' };
 """
 
 
+HTML_TEMPLATE_RETRO = r"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Morning Dashboard — %%GEN_DATE%%</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
+
+  :root {
+    --bg:      #ede8d8;
+    --cream:   #f5f1e6;
+    --card:    #faf8f2;
+    --border:  #ddd8c8;
+    --text:    #2a2520;
+    --muted:   #8a8070;
+    --blue:    #2147a0;
+    --blue-lt: #d5e0f7;
+    --yellow:  #e8a820;
+    --yel-lt:  #fdf0cc;
+    --red:     #c93225;
+    --red-lt:  #fad8d5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--cream);
+    border-bottom: 2px solid var(--border);
+    padding: 14px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header-brand { display: flex; align-items: center; gap: 12px; }
+  .header-emblem {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; position: relative;
+  }
+  .header-emblem::after {
+    content: '';
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--yellow);
+    position: absolute; bottom: -3px; right: -3px;
+    border: 2px solid var(--cream);
+  }
+  .header h1 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .header .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .header .meta { text-align: right; }
+  .header .meta .date-pill {
+    display: inline-block;
+    background: var(--blue); color: #fff;
+    font-size: 11px; font-weight: 700;
+    padding: 5px 16px; border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .header .meta .basis { font-size: 10px; color: var(--muted); margin-top: 5px; }
+
+  /* ── Layout ── */
+  .container { max-width: 1440px; margin: 0 auto; padding: 20px; }
+
+  /* ── KPI Strip ── */
+  .kpi-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .kpi {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 20px 20px 16px;
+    position: relative; overflow: hidden;
+  }
+  .kpi::after {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 5px;
+    border-radius: 18px 18px 0 0;
+  }
+  .kpi.bond::after   { background: var(--blue); }
+  .kpi.kospi::after  { background: var(--yellow); }
+  .kpi.hanwha::after { background: var(--red); }
+
+  .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .kpi .label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .kpi-badge {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+  }
+  .kpi.bond   .kpi-badge { background: var(--blue-lt); color: var(--blue); }
+  .kpi.kospi  .kpi-badge { background: var(--yel-lt);  color: var(--yellow); }
+  .kpi.hanwha .kpi-badge { background: var(--red-lt);  color: var(--red); }
+
+  .kpi .value { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -1px; line-height: 1; }
+  .kpi-divider { height: 1px; background: var(--border); margin: 12px 0 8px; }
+  .kpi .chg { font-size: 11px; color: var(--muted); }
+  .chg .up   { color: var(--red);  font-weight: 700; }
+  .chg .down { color: var(--blue); font-weight: 700; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .card-title {
+    padding: 12px 20px;
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 1.5px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ct-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; min-width: 400px; }
+  th, td { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  th {
+    background: var(--bg); color: var(--muted);
+    font-weight: 700; font-size: 9.5px;
+    text-align: center; white-space: pre-line;
+    line-height: 1.4; letter-spacing: 0.5px;
+  }
+  th:first-child { text-align: left; width: 120px; }
+  td { text-align: right; color: var(--text); font-size: 11px; }
+  td:first-child { text-align: left; font-weight: 600; color: var(--muted); font-size: 10.5px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,0,0,0.02); }
+  td.today { font-weight: 700; color: var(--blue); background: var(--blue-lt); }
+  td.null-val { color: var(--border); }
+
+  /* ── Charts ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-pad { padding: 16px 18px 14px; }
+  .chart-pad canvas { max-height: 240px; }
+
+  /* ── Footer ── */
+  .footer { text-align: right; color: var(--muted); font-size: 10px; padding: 12px 0 20px; }
+
+  /* ── 반응형 ── */
+  @media (max-width: 640px) {
+    .container { padding: 14px 12px; }
+    .kpi-strip { grid-template-columns: 1fr; gap: 10px; }
+    .kpi .value { font-size: 24px; }
+    .charts-row { grid-template-columns: 1fr; }
+    .chart-pad canvas { max-height: 200px; }
+    .header h1 { font-size: 13px; }
+    .header .sub { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-emblem">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7" stroke="#fff" stroke-width="1.5"/>
+        <line x1="9" y1="9" x2="9" y2="3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="9" x2="13" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Morning Dashboard</h1>
+      <div class="sub">Hanwha Life &nbsp;·&nbsp; 임원 의사결정 참고용</div>
+    </div>
+  </div>
+  <div class="meta">
+    <div class="date-pill">%%GEN_DATE%%</div>
+    <div class="basis">기준: 전일 종가</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">
+        <span class="ct-dot" style="background:var(--blue)"></span>
+        국고채 30년물 금리 추이 (%)
+      </div>
+      <div class="chart-pad"><canvas id="cBond"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span class="ct-dot" style="background:var(--yellow)"></span>
+        KOSPI / 한화생명 주가 추이
+      </div>
+      <div class="chart-pad"><canvas id="cEquity"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="ct-dot" style="background:var(--red)"></span>
+      주요 지표 요약
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="hdr"></tr></thead>
+        <tbody id="tbd"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">%%GEN_DATETIME%% &nbsp;·&nbsp; FinanceDataReader</div>
+</div>
+
+<script>
+const D = %%DATA_JSON%%;
+
+(function() {
+  const n = D.columns.length;
+  const strip = document.getElementById('kpiStrip');
+  const defs = [
+    { key:'bond',   label:'국고채 30Y', cls:'bond',   icon:'%',
+      fmt:  v => v != null ? v.toFixed(2)+'%' : '—',
+      fmtd: (d,p) => d != null && p != null ? { val:(d-p).toFixed(2)+'%p', up:d>p } : null },
+    { key:'kospi',  label:'KOSPI',      cls:'kospi',  icon:'K',
+      fmt:  v => v != null ? v.toLocaleString('ko-KR',{maximumFractionDigits:0}) : '—',
+      fmtd: (d,p) => d != null && p != null ? { val:(d-p).toLocaleString('ko-KR',{maximumFractionDigits:0}), up:d>p } : null },
+    { key:'hanwha', label:'한화생명',   cls:'hanwha', icon:'H',
+      fmt:  v => v != null ? v.toLocaleString('ko-KR')+'원' : '—',
+      fmtd: (d,p) => d != null && p != null ? { val:(d-p).toLocaleString('ko-KR')+'원', up:d>p } : null },
+  ];
+  defs.forEach(def => {
+    const today = D.rows[def.key][n-1];
+    const prev  = D.rows[def.key][n-2];
+    const chg   = def.fmtd(today, prev);
+    let chgHtml = '';
+    if (chg) {
+      const sign = chg.up ? '▲' : '▼';
+      const cls  = chg.up ? 'up' : 'down';
+      chgHtml = `<span class="${cls}">${sign} ${chg.val}</span> 전월대비`;
+    }
+    strip.innerHTML += `
+      <div class="kpi ${def.cls}">
+        <div class="kpi-head">
+          <div class="label">${def.label}</div>
+          <div class="kpi-badge">${def.icon}</div>
+        </div>
+        <div class="value">${def.fmt(today)}</div>
+        <div class="kpi-divider"></div>
+        <div class="chg">${chgHtml || '&nbsp;'}</div>
+      </div>`;
+  });
+})();
+
+(function() {
+  const hdr = document.getElementById('hdr');
+  const tbd = document.getElementById('tbd');
+  const n   = D.columns.length;
+  const th0 = document.createElement('th');
+  th0.textContent = '지표';
+  hdr.appendChild(th0);
+  D.columns.forEach(col => {
+    const th = document.createElement('th');
+    th.textContent = col.label;
+    hdr.appendChild(th);
+  });
+  const rows = [
+    { key:'bond',   name:'국고채 30Y (%)', fmt: v => v != null ? v.toFixed(2)+'%' : null },
+    { key:'kospi',  name:'KOSPI',           fmt: v => v != null ? v.toLocaleString('ko-KR',{maximumFractionDigits:0}) : null },
+    { key:'hanwha', name:'한화생명 (원)',   fmt: v => v != null ? v.toLocaleString('ko-KR') : null },
+  ];
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    const td0 = document.createElement('td');
+    td0.textContent = row.name;
+    tr.appendChild(td0);
+    D.rows[row.key].forEach((v, i) => {
+      const td  = document.createElement('td');
+      const txt = row.fmt(v);
+      if (txt == null) { td.textContent = '—'; td.className = 'null-val'; }
+      else { td.textContent = txt; if (i === n-1) td.className = 'today'; }
+      tr.appendChild(td);
+    });
+    tbd.appendChild(tr);
+  });
+})();
+
+const TICK = { color: '#8a8070', font: { size: 10 } };
+const GRID = { color: 'rgba(180,170,150,0.4)' };
+
+(function() {
+  const ctx  = document.getElementById('cBond').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 250);
+  grad.addColorStop(0, 'rgba(33,71,160,0.2)');
+  grad.addColorStop(1, 'rgba(33,71,160,0.02)');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: D.bond_s.dates,
+      datasets: [{
+        label: '국고채 30Y (%)', data: D.bond_s.values,
+        borderColor: '#2147a0', backgroundColor: grad,
+        borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { ...TICK, maxTicksLimit: 8, maxRotation: 0 }, grid: GRID },
+        y: { ticks: { ...TICK, callback: v => v.toFixed(2)+'%' }, grid: GRID },
+      }
+    }
+  });
+})();
+
+(function() {
+  new Chart(document.getElementById('cEquity').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: D.kospi_s.dates,
+      datasets: [
+        {
+          label: 'KOSPI', data: D.kospi_s.values,
+          borderColor: '#e8a820', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0, tension: 0.25, yAxisID: 'y1',
+        },
+        {
+          label: '한화생명 (원)', data: D.hanwha_aligned,
+          borderColor: '#c93225', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0, tension: 0.25, yAxisID: 'y2',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8a8070', font: { size: 11 }, boxWidth: 12, padding: 16 } }
+      },
+      scales: {
+        x:  { ticks: { ...TICK, maxTicksLimit: 8, maxRotation: 0 }, grid: GRID },
+        y1: { position: 'left',  ticks: { ...TICK, callback: v => v.toLocaleString('ko-KR',{maximumFractionDigits:0}) }, grid: GRID },
+        y2: { position: 'right', ticks: { ...TICK, callback: v => v.toLocaleString('ko-KR') }, grid: { display: false } },
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
+"""
+
+
 def build_html(data, gen_date, gen_datetime):
     data_json = json.dumps(data, ensure_ascii=False)
-    html = HTML_TEMPLATE
-    html = html.replace('%%GEN_DATE%%',     gen_date)
-    html = html.replace('%%GEN_DATETIME%%', gen_datetime)
-    html = html.replace('%%DATA_JSON%%',    data_json)
-    return html
+
+    def render(template):
+        h = template
+        h = h.replace('%%GEN_DATE%%',     gen_date)
+        h = h.replace('%%GEN_DATETIME%%', gen_datetime)
+        h = h.replace('%%DATA_JSON%%',    data_json)
+        return h
+
+    return render(HTML_TEMPLATE), render(HTML_TEMPLATE_RETRO)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -544,11 +907,19 @@ def main():
     gen_date     = today.strftime('%Y-%m-%d')
     gen_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
-    html = build_html(data, gen_date, gen_datetime)
+    html1, html2 = build_html(data, gen_date, gen_datetime)
 
-    out = Path(__file__).parent / 'dashboard.html'
-    out.write_text(html, encoding='utf-8')
-    print(f"\n[완료] {out.resolve()}")
+    out1 = Path(__file__).parent / 'dashboard.html'
+    out1.write_text(html1, encoding='utf-8')
+    print(f"\n[완료] {out1.resolve()}")
+
+    out2 = Path(__file__).parent / 'dashboard2.html'
+    out2.write_text(html2, encoding='utf-8')
+    print(f"[완료] {out2.resolve()}")
+
+    out3 = Path(__file__).parent / 'index.html'
+    out3.write_text(html2, encoding='utf-8')
+    print(f"[완료] {out3.resolve()}")
 
 
 if __name__ == '__main__':
